@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}搜索: {{ query }} - MyBlog{% endblock %}
+
+{% block banner %}
+<div class="main-banner">
+    <div class="container text-center">
+        <h1>搜索结果</h1>
+        <p class="lead">{{ query }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+    {% if query %}
+        {% if search_results %}
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle-fill me-2"></i> 找到 {{ search_results|length }} 篇相关文章
+            </div>
+            
+            <div class="row">
+                {% for post in search_results %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            {% if post.featured_image %}
+                                <img src="{{ post.featured_image.url }}" class="card-img-top" alt="{{ post.title }}">
+                            {% else %}
+                                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 200px;">
+                                    <i class="bi bi-image" style="font-size: 3rem;"></i>
+                                </div>
+                            {% endif %}
+                            <div class="card-body">
+                                <h2 class="card-title h5">
+                                    <a href="{% url 'post_detail' post.slug %}">{{ post.title }}</a>
+                                </h2>
+                                <div class="post-meta">
+                                    <span><i class="bi bi-person-circle"></i> {{ post.author.username }}</span>
+                                    <span><i class="bi bi-calendar3"></i> {{ post.created_on|date:"Y-m-d" }}</span>
+                                    <span><i class="bi bi-tag"></i> <a href="{% url 'category' post.category.name %}">{{ post.category.name }}</a></span>
+                                </div>
+                                <p class="card-text">{{ post.excerpt|default:post.content|truncatewords:20 }}</p>
+                                <a href="{% url 'post_detail' post.slug %}" class="btn btn-primary">阅读全文</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-search" style="font-size: 3rem; color: #ddd;"></i>
+                    <h3 class="mt-3">找不到相关内容</h3>
+                    <p class="text-muted">抱歉，没有找到与 "{{ query }}" 相关的文章。</p>
+                    <div class="mt-4">
+                        <h5>搜索建议:</h5>
+                        <ul class="list-unstyled text-start">
+                            <li><i class="bi bi-check-circle-fill me-2 text-primary"></i> 检查拼写是否正确</li>
+                            <li><i class="bi bi-check-circle-fill me-2 text-primary"></i> 尝试使用不同的关键词</li>
+                            <li><i class="bi bi-check-circle-fill me-2 text-primary"></i> 使用更一般性的词汇</li>
+                            <li><i class="bi bi-check-circle-fill me-2 text-primary"></i> 减少搜索词数量</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-search" style="font-size: 3rem; color: #ddd;"></i>
+                <h3 class="mt-3">请输入搜索关键词</h3>
+                <p class="text-muted">在导航栏的搜索框中输入关键词以查找内容</p>
+                <form class="d-flex search-form justify-content-center mt-4" action="{% url 'search' %}" method="get">
+                    <input class="form-control me-2" type="search" placeholder="搜索文章..." name="q" style="max-width: 300px;">
+                    <button class="btn btn-primary" type="submit">搜索</button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+    
+    <div class="text-center mt-4">
+        <a href="{% url 'home' %}" class="btn btn-outline-primary">
+            <i class="bi bi-house-door me-2"></i>返回首页
+        </a>
+    </div>
+{% endblock %}
