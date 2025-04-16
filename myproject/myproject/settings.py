@@ -28,6 +28,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# CSRF设置
+CSRF_TRUSTED_ORIGINS = ['https://sensendaodao.com']
+
 
 # Application definition
 
