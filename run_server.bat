@@ -6,7 +6,7 @@ echo -------------------------
 cd myproject
 
 :: 激活虚拟环境（如果使用虚拟环境）
-:: call ..\venv\Scripts\activate
+call ..\venv\Scripts\activate
 
 :: 运行迁移
 echo 执行数据库迁移...
