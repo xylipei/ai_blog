@@ -29,7 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 # CSRF设置
-CSRF_TRUSTED_ORIGINS = ['127.0.0.1', 'localhost','115.190.91.229']
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1', 'http://localhost', 'http://115.190.91.229', 'https://127.0.0.1', 'https://localhost', 'https://115.190.91.229']
 
 
 # Application definition
