@@ -276,7 +276,7 @@ if(!norunFlag){
 					
 				}
 			});
-			$('#talk_send').on('click',function(){
+			$('#talk_send').on('click', async function() { // 使用 async
 				var info_ = $('#AIuserText').val();
 				var userid_ = $('#AIuserName').val();
 				if(info_ == "" ){
@@ -288,26 +288,74 @@ if(!norunFlag){
 					return;
 				}
 				showMessage('思考中~', 0);
-				$.ajax({
-					type: 'POST',
-					url: talkAPI,
-					data: {
-						"info":info_,
-						"userid":userid_
-					},
-					success: function(res) {
-						if(res.code !== 100000){
-							talkValTimer();
-							showMessage('似乎有什么错误，请和站长联系！',0);
-						}else{
-							talkValTimer();
-							showMessage(res.text,0);
-						}
-						console.log(res);
-						$('#AIuserText').val("");
-						sessionStorage.setItem("live2duser", userid_);
+				$('.message').html(''); // 清空之前的消息
+
+				try {
+					const response = await fetch(talkAPI, {
+						method: 'POST',
+						headers: {
+							'X-CSRFToken': csrftoken,
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							"message": info_,
+							"userid": userid_
+						})
+					});
+
+					if (!response.ok) {
+                        let errorText = '网络似乎出现了问题，请稍后再试！';
+                        try {
+                            const errorData = await response.json(); // 尝试解析JSON错误
+                            errorText = errorData.error || errorText;
+                        } catch (e) {
+                            // 如果不是JSON，尝试读取文本
+                            errorText = await response.text() || errorText;
+                        }
+						throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
 					}
-				});
+
+					const reader = response.body.getReader();
+					const decoder = new TextDecoder('utf-8');
+					let result = '';
+                    let currentMessage = '';
+                    $('.message').fadeTo(200, 1); // 确保消息框可见
+
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) {
+							break;
+						}
+						const chunk = decoder.decode(value, { stream: true });
+                        currentMessage += chunk;
+                        // 检查是否包含错误标识
+                        if (currentMessage.startsWith("Error:")) {
+                            showMessage(currentMessage, 0);
+                            reader.cancel(); // 停止读取流
+                            return; // 提前退出
+                        }
+                        // 逐步显示文本，模拟打字机效果
+                        $('.message').html(currentMessage.replace(/\n/g, '<br>')); // 替换换行符
+                        talkValTimer(); // 更新对话状态
+					}
+
+                    // 流结束后处理
+                    $('#AIuserText').val("");
+                    sessionStorage.setItem("live2duser", userid_);
+
+				} catch (error) {
+					talkValTimer();
+                    let errorMsg = '网络似乎出现了问题，请稍后再试！';
+                    if (error.message && error.message.includes('HTTP error!')) {
+                        // 尝试提取后端返回的错误信息
+                        const match = error.message.match(/message: (.*)/);
+                        if (match && match[1]) {
+                            errorMsg = match[1];
+                        }
+                    }
+					showMessage(errorMsg, 0);
+					console.error('Fetch error:', error);
+				}
 			});
 		}else{
 			$('#showInfoBtn').hide();

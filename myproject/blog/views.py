@@ -4,6 +4,15 @@ from django.contrib import messages
 from .models import Post, Category, Comment
 from .forms import CommentForm
 from django.db.models import Q
+from django.http import JsonResponse, StreamingHttpResponse
+import os
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+from langchain.schema import HumanMessage
+import json
+
+# Load environment variables
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.env'))
 
 # Create your views here.
 
@@ -84,3 +93,50 @@ def search_posts(request):
         'categories': Category.objects.all(),
         'recent_posts': Post.objects.filter(status='published').order_by('-created_on')[:5]
     })
+
+import os
+import json
+from django.http import JsonResponse
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+from typing import Any, List, Mapping, Optional
+
+def chat_with_ai(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message')
+            user_id = data.get('userid', 'default_user')
+            print(f"Received message: {user_message}, User ID: {user_id}")
+            if not user_message:
+                return JsonResponse({'error': 'No message provided'}, status=400)
+
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if not openai_api_key or openai_api_key == "YOUR_OPENAI_API_KEY":
+                return JsonResponse({'reply': '抱歉，我的大脑（OpenAI API Key）还没配置好，暂时无法回复。请联系管理员设置OpenAI API Key。'})
+
+            chat_model = ChatOpenAI(
+                api_key=openai_api_key,
+                model="deepseek-chat",
+                temperature=0.7,
+                streaming=True  # 启用流式输出
+            )
+
+            # 定义流式响应生成器
+            def stream_response_generator():
+                try:
+                    for chunk in chat_model.stream([HumanMessage(content=user_message)]):
+                        if chunk.content:
+                            yield chunk.content
+                except Exception as e:
+                    print(f"Error during streaming: {e}")
+                    yield f"Error: {str(e)}"
+
+            # 返回 StreamingHttpResponse
+            response = StreamingHttpResponse(stream_response_generator(), content_type='text/plain')
+            return response
+
+        except Exception as e:
+            print(f"Error processing request: {e}")
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)

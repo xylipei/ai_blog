@@ -188,8 +188,12 @@
     <div id="open_live2d">召唤伊斯特瓦尔</div>
     <script type="text/javascript" src="{% static 'js/jquery.min.js' %}"></script>
     <script>
+        // Add CSRF token for AJAX requests
+        const csrftoken = '{{ csrf_token }}';
+    </script>
+    <script>
     var message_Path = '/static/live2d/';//资源目录，如果目录不对请更改
-    var talkAPI = "";//如果有类似图灵机器人的聊天接口请填写接口路径
+    var talkAPI = "{% url 'chat_with_ai' %}";//设置为指向 Langchain 后端的 API
     var home_Path = './';//本地文件系统路径，设置为当前目录
     </script>
     <script type="text/javascript" src="{% static 'live2d/js/live2d.js' %}"></script>
