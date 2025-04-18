@@ -1,0 +1,106 @@
+/* Django Admin 自定义美化样式 */
+body.login, body#login {
+    background: linear-gradient(135deg, #6f42c1 0%, #4582ec 100%) !important;
+}
+
+#header, .module caption, .breadcrumbs {
+    background: #6f42c1 !important;
+    color: #fff !important;
+}
+
+#header a, .breadcrumbs a {
+    color: #ffe082 !important;
+}
+
+#user-tools {
+    background: #fff;
+    color: #6f42c1;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+#content-main, .module, .inline-group {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    padding: 16px;
+}
+
+#changelist-filter, .filter-wrapper {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+input, select, textarea {
+    border-radius: 6px !important;
+    border: 1px solid #d1d5db !important;
+    padding: 6px 10px !important;
+    font-size: 15px !important;
+}
+
+button, input[type="submit"], .button {
+    background: linear-gradient(135deg, #6f42c1 0%, #8a63d2 100%) !important;
+    color: #fff !important;
+    border-radius: 6px !important;
+    border: none !important;
+    padding: 8px 18px !important;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button:hover, input[type="submit"]:hover, .button:hover {
+    background: linear-gradient(135deg, #4582ec 0%, #6f42c1 100%) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+#footer {
+    background: #343a40 !important;
+    color: #fff !important;
+    border-radius: 0 0 8px 8px;
+}
+
+/* 表格美化 */
+.change-list table, .results table {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.03);
+}
+.change-list th, .results th {
+    background: #f8f9fa;
+    color: #6f42c1;
+    font-weight: 600;
+}
+.change-list td, .results td {
+    background: #fff;
+}
+
+/* 登录表单美化 */
+#login-form {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    padding: 32px 24px;
+    transition: all 0.3s ease;
+}
+
+#login-form:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+/* 响应式适配 */
+@media (max-width: 600px) {
+    #content-main, .module, .inline-group {
+        padding: 8px;
+    }
+    #login-form {
+        padding: 16px 8px;
+    }
+    button, input[type="submit"], .button {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+}

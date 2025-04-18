@@ -122,10 +122,21 @@ def chat_with_ai(request):
                 streaming=True  # 启用流式输出
             )
 
+            # 定义提示词模板
+            prompt_template = """你是一个专业的博客助手，你的名字为：可乐不加冰，请用中文回答用户的问题。
+            回答要求：
+            - 保持专业但友好的语气
+            - 回答简洁明了，不超过200字
+            - 如果问题与博客内容相关，优先参考博客文章回答
+            - 避免提供医疗、法律等专业建议
+            
+            用户问题：{user_input}"""
+            
             # 定义流式响应生成器
             def stream_response_generator():
                 try:
-                    for chunk in chat_model.stream([HumanMessage(content=user_message)]):
+                    formatted_prompt = prompt_template.format(user_input=user_message)
+                    for chunk in chat_model.stream([HumanMessage(content=formatted_prompt)]):
                         if chunk.content:
                             yield chunk.content
                 except Exception as e:
