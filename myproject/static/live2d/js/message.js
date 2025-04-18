@@ -334,8 +334,15 @@ if(!norunFlag){
                             reader.cancel(); // 停止读取流
                             return; // 提前退出
                         }
-                        // 逐步显示文本，模拟打字机效果
-                        $('.message').html(currentMessage.replace(/\n/g, '<br>')); // 替换换行符
+                        // 逐步显示文本，并解析Markdown
+                        // 确保 marked 函数可用 (需要引入 marked.js)
+                        if (typeof marked === 'function') {
+                            $('.message').html(marked.parse(currentMessage));
+                        } else {
+                            // Fallback: 替换换行符为 <br>
+                            $('.message').html(currentMessage.replace(/\n/g, '<br>'));
+                            console.warn('marked.js not found. Markdown rendering disabled.');
+                        }
                         talkValTimer(); // 更新对话状态
 					}
 
