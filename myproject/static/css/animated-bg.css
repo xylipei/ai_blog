@@ -1,0 +1,31 @@
+/* 添加B站风格渐变背景动画 */
+.main-banner {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96f2d7);
+  background-size: 400% 400%;
+  animation: gradientFlow 15s ease infinite;
+}
+
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.main-banner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  right: -50%;
+  bottom: -50%;
+  background: linear-gradient(45deg, transparent 35%, rgba(255,255,255,0.1) 50%, transparent 65%);
+  animation: lightStreak 8s linear infinite;
+  transform: rotate(30deg);
+}
+
+@keyframes lightStreak {
+  from { transform: translateY(-100%) rotate(30deg); }
+  to { transform: translateY(100%) rotate(30deg); }
+}

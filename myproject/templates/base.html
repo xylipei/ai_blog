@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{% static 'live2d/css/live2d.css' %}" />
     <link href="{% static 'css/css2.css' %}" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/animated-bg.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -43,6 +44,68 @@
     {% block banner %}{% endblock %}
 
     <div class="container content-section">
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'canvas-container';
+        document.querySelector('.main-banner').prepend(canvas);
+        
+        // 粒子动画初始化代码
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = 300;
+        
+         class Particle {
+           constructor() {
+             this.reset();
+           }
+
+           reset() {
+             this.x = Math.random() * canvas.width;
+             this.y = Math.random() * canvas.height;
+             this.radius = Math.random() * 2;
+             this.speedX = Math.sin(Math.random() * Math.PI * 2) * 2;
+             this.speedY = Math.cos(Math.random() * Math.PI * 2) * 2;
+           }
+
+           update() {
+             this.x += this.speedX;
+             this.y += this.speedY;
+
+             if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+               this.reset();
+             }
+           }
+
+           draw() {
+             ctx.beginPath();
+             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+             ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 60%)`;
+            ctx.shadowColor = 'rgba(255,255,255,0.8)';
+            ctx.shadowBlur = 15;
+             ctx.fill();
+           }
+         }
+
+         const particles = Array.from({length: 100}, () => new Particle());
+
+         function animate() {
+           ctx.clearRect(0, 0, canvas.width, canvas.height);
+           particles.forEach(particle => {
+             particle.update();
+             particle.draw();
+           });
+           requestAnimationFrame(animate);
+         }
+
+         window.addEventListener('resize', () => {
+           canvas.width = window.innerWidth;
+           canvas.height = 300;
+         });
+
+         animate();
+    });
+    </script>
         <div class="row">
             <!-- 主内容区 -->
             <div class="col-lg-8">
