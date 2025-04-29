@@ -161,9 +161,97 @@ if(!norunFlag){
 	function showHitokoto(){
 		if(sessionStorage.getItem("Sleepy")!=="1"){
 			if(!AITalkFlag){
+				// 情绪状态管理 - 模拟人类情绪的自然变化
+				var currentMood = sessionStorage.getItem("live2dMood") || "normal";
+				var moodChangeChance = 0.15; // 情绪自然变化的概率
+				
+				// 情绪自然过渡 - 模拟人类情绪不会突然剧烈变化的特性
+				if(Math.random() < moodChangeChance) {
+					// 情绪状态转换图 - 模拟情绪的自然流转
+					var moodTransitions = {
+						"normal": ["happy", "shy", "normal", "normal", "normal"], // 正常状态更可能保持或变得开心
+						"happy": ["normal", "happy", "happy", "surprised"], // 开心状态可能保持或回归正常
+						"shy": ["normal", "shy", "happy"], // 害羞后可能变正常或开心
+						"surprised": ["normal", "happy", "surprised"], // 惊讶后通常回归正常
+						"sad": ["normal", "sad"] // 悲伤后慢慢恢复正常
+					};
+					
+					// 获取当前情绪可能的转换状态
+					var possibleMoods = moodTransitions[currentMood] || ["normal"];
+					// 随机选择一个新情绪
+					var newMood = possibleMoods[Math.floor(Math.random() * possibleMoods.length)];
+					
+					// 保存新的情绪状态
+					sessionStorage.setItem("live2dMood", newMood);
+					currentMood = newMood;
+					
+					// 显示微表情 - 短暂的表情变化
+					var moodEmojis = {
+						"normal": "😌",
+						"happy": "😊",
+						"shy": "😳",
+						"surprised": "😲",
+						"sad": "😢"
+					};
+					
+					// 显示情绪变化的微表情
+					showMessage(moodEmojis[currentMood], 1000);
+					
+					// 添加轻微的动画效果 - 模拟人类细微的身体语言
+					$('#landlord').addClass('animated-' + currentMood);
+					setTimeout(function(){
+						$('#landlord').removeClass('animated-' + currentMood);
+					}, 1000);
+				}
+				
+				// 获取一言并根据内容调整情绪
 				$.getJSON('https://v1.hitokoto.cn/',function(result){
 					talkValTimer();
-					showMessage(result.hitokoto, 0);
+					
+					// 内容情感分析 - 根据文本内容推断合适的情绪
+					var content = result.hitokoto;
+					var currentMood = sessionStorage.getItem("live2dMood") || "normal";
+					var contentMood = "normal";
+					
+					// 简单的情感分析 - 通过关键词判断文本情感
+					if(content.includes('开心') || content.includes('快乐') || content.includes('喜欢') || 
+					   content.includes('美好') || content.includes('幸福') || content.includes('感谢')) {
+						contentMood = "happy";
+					} else if(content.includes('思考') || content.includes('想') || content.includes('认为') || 
+							 content.includes('或许') || content.includes('可能')) {
+						contentMood = "normal";
+					} else if(content.includes('伤心') || content.includes('难过') || content.includes('痛苦') || 
+							 content.includes('遗憾') || content.includes('失去')) {
+						contentMood = "sad";
+					} else if(content.includes('惊') || content.includes('哇') || content.includes('啊') || 
+							 content.includes('竟然') || content.includes('居然')) {
+						contentMood = "surprised";
+					} else if(content.includes('害羞') || content.includes('不好意思') || content.includes('抱歉')) {
+						contentMood = "shy";
+					}
+					
+					// 情绪融合 - 当前情绪与内容情绪的自然融合
+					// 有70%的概率会被内容影响情绪，30%保持当前情绪
+					if(Math.random() < 0.7 && contentMood !== "normal") {
+						sessionStorage.setItem("live2dMood", contentMood);
+						currentMood = contentMood;
+					}
+					
+					// 表情符号选择 - 根据当前情绪状态选择合适的表情
+					var moodEmojis = {
+						"normal": ["🙂", "😌", "🧐", "✨"],
+						"happy": ["😊", "😄", "😁", "🥰"],
+						"shy": ["😳", "🤭", "😶"],
+						"surprised": ["😲", "😮", "😯", "🤔"],
+						"sad": ["😢", "😔", "😞", "🥺"]
+					};
+					
+					// 从当前情绪对应的表情列表中随机选择一个
+					var emojis = moodEmojis[currentMood];
+					var randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+					
+					// 显示带表情的消息
+					showMessage(randomEmoji + ' ' + content, 0);
 				});
 			}
 		}else{
@@ -191,8 +279,58 @@ if(!norunFlag){
 		if(Array.isArray(text)) text = text[Math.floor(Math.random() * text.length + 1)-1];
 		//console.log('showMessage', text);
 		$('.message').stop();
-		$('.message').html(text);
-		$('.message').fadeTo(200, 1);
+
+		var processedText = text; // Default to original text
+		try {
+			if (typeof marked === 'function') {
+				// WARNING: marked.parse() does not sanitize HTML. Ensure input is trusted or sanitize separately.
+				processedText = marked.parse(text);
+			} else {
+				console.warn('marked.js not found or not loaded correctly. Markdown rendering disabled.');
+			}
+		} catch (e) {
+			console.error('Error parsing Markdown:', e);
+			// Fallback to original text if parsing fails
+			processedText = text;
+		}
+
+		// 添加打字机效果
+		var typingSpeed = 50; // 打字速度(ms)
+		var i = 0;
+		var messageElement = $('.message');
+		messageElement.html(''); // 清空现有内容
+		messageElement.fadeTo(200, 1);
+
+		// 创建一个临时div来处理HTML实体并获取纯文本长度用于打字机
+		var tempDiv = $('<div>').html(processedText);
+		var plainText = tempDiv.text(); // 获取纯文本内容
+		var htmlContent = tempDiv.html(); // 获取处理后的HTML内容
+
+		// 如果纯文本很短，或者不是打字机效果的场景（例如，timeout为0的即时消息），直接显示完整HTML
+		if(plainText.length < 10 || timeout === 0) {
+			messageElement.html(htmlContent);
+			// 如果需要，在这里处理 timeout 逻辑 (原代码注释掉了 hideMessage)
+			// if (timeout > 0) hideMessage(timeout);
+			return;
+		}
+
+		// 否则使用打字机效果 (注意：打字机效果作用于纯文本，最后设置完整HTML)
+		var currentHtml = '';
+		var charIndex = 0;
+		var typingEffect = setInterval(function() {
+			if(charIndex < plainText.length) {
+				// 逐步构建显示的文本，这里简单处理，可能无法完美还原复杂HTML的打字效果
+				// 更好的方式可能是逐字显示纯文本，结束后替换为完整HTML
+				messageElement.html(plainText.substring(0, charIndex + 1));
+				charIndex++;
+			} else {
+				clearInterval(typingEffect);
+				messageElement.html(htmlContent); // 打字结束后显示完整HTML
+				// 如果需要，在这里处理 timeout 逻辑
+				// if (timeout > 0) hideMessage(timeout);
+			}
+		}, typingSpeed);
+
 		//if (timeout === null) timeout = 5000;
 		//hideMessage(timeout);
 	}
@@ -316,7 +454,9 @@ if(!norunFlag){
 					}
 
 					const reader = response.body.getReader();
-					const decoder = new TextDecoder('utf-8');
+					// 使用UTF-8编码，并设置fatal选项为true以便在遇到无效字符时抛出错误
+					// 使用更稳健的UTF-8解码配置，忽略错误字符
+					const decoder = new TextDecoder('utf-8', { fatal: false });
 					let result = '';
                     let currentMessage = '';
                     $('.message').fadeTo(200, 1); // 确保消息框可见
@@ -326,24 +466,104 @@ if(!norunFlag){
 						if (done) {
 							break;
 						}
-						const chunk = decoder.decode(value, { stream: true });
-                        currentMessage += chunk;
-                        // 检查是否包含错误标识
-                        if (currentMessage.startsWith("Error:")) {
-                            showMessage(currentMessage, 0);
-                            reader.cancel(); // 停止读取流
-                            return; // 提前退出
-                        }
-                        // 逐步显示文本，并解析Markdown
-                        // 确保 marked 函数可用 (需要引入 marked.js)
-                        if (typeof marked === 'function') {
-                            $('.message').html(marked.parse(currentMessage));
-                        } else {
-                            // Fallback: 替换换行符为 <br>
-                            $('.message').html(currentMessage.replace(/\n/g, '<br>'));
-                            console.warn('marked.js not found. Markdown rendering disabled.');
-                        }
-                        talkValTimer(); // 更新对话状态
+						// 解码时处理流式数据
+						try {
+							// 使用stream:true确保流式解码正确处理
+							const chunk = decoder.decode(value, { stream: true });
+							
+							// 增强的文本清理：保留常见可见字符和中文字符，移除可能导致乱码的控制字符
+							// 保留ASCII可打印字符(32-126)、中文字符(常用+扩展)、常见标点和符号
+							const cleanedChunk = chunk
+								.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // 移除控制字符
+								.replace(/[\x7F-\x9F]/g, '')                      // 移除扩展ASCII控制字符
+								.replace(/\uFFFD/g, '');                           // 移除Unicode替换字符(常见乱码标志)
+							
+							currentMessage += cleanedChunk;
+							
+							// 检查是否包含错误标识
+							if (currentMessage.startsWith("Error:")) {
+								showMessage(currentMessage, 0);
+								reader.cancel(); // 停止读取流
+								return; // 提前退出
+							}
+							
+							// 安全地处理HTML内容，防止XSS和乱码
+							let displayContent = currentMessage;
+							
+							// 逐步显示文本，并解析Markdown
+							if (typeof marked === 'function') {
+								try {
+									// 使用marked的安全选项，确保XSS防护
+									const markedOptions = { 
+										sanitize: true,
+										breaks: true,     // 自动将换行符转换为<br>
+										gfm: true         // 启用GitHub风格Markdown
+									};
+									displayContent = marked.parse(currentMessage, markedOptions);
+								} catch (markdownError) {
+									console.warn('Markdown解析错误:', markdownError);
+									// 降级处理：安全地替换换行符和转义HTML
+									displayContent = currentMessage
+										.replace(/&/g, '&amp;')
+										.replace(/</g, '&lt;')
+										.replace(/>/g, '&gt;')
+										.replace(/"/g, '&quot;')
+										.replace(/\n/g, '<br>');
+								}
+							} else {
+								// Fallback: 安全地替换换行符和转义HTML
+								displayContent = currentMessage
+									.replace(/&/g, '&amp;')
+									.replace(/</g, '&lt;')
+									.replace(/>/g, '&gt;')
+									.replace(/"/g, '&quot;')
+									.replace(/\n/g, '<br>');
+								console.warn('marked.js not found. Markdown rendering disabled.');
+							}
+							
+							// 安全地设置HTML内容
+							$('.message').html(displayContent);
+							talkValTimer(); // 更新对话状态
+						} catch (decodeError) {
+							console.error('解码错误:', decodeError);
+							// 增强的错误恢复机制
+							try {
+								// 使用更宽容的解码配置
+								const fallbackDecoder = new TextDecoder('utf-8', { 
+									fatal: false,
+									ignoreBOM: true // 忽略字节顺序标记，增加兼容性
+								});
+								
+								// 尝试直接解码整个数据块
+								const fallbackChunk = fallbackDecoder.decode(value);
+								
+								// 更严格的字符过滤，只保留确定安全的字符
+								const cleanedChunk = fallbackChunk.replace(
+									/[^\x20-\x7E\u4E00-\u9FFF\u3000-\u303F\uFF00-\uFFEF\u2000-\u206F\u2E00-\u2E7F]/g, 
+									''
+								);
+								
+								currentMessage += cleanedChunk;
+								
+								// 安全显示内容，确保HTML转义
+								const safeContent = currentMessage
+									.replace(/&/g, '&amp;')
+									.replace(/</g, '&lt;')
+									.replace(/>/g, '&gt;')
+									.replace(/"/g, '&quot;')
+									.replace(/\n/g, '<br>');
+									
+								$('.message').html(safeContent);
+								talkValTimer();
+								
+								// 记录恢复成功
+								console.info('使用备用解码方法成功恢复内容');
+							} catch (fallbackError) {
+								// 如果所有解码方法都失败，显示友好错误消息
+								console.error('备用解码也失败:', fallbackError);
+								showMessage('抱歉，接收到的消息无法正确显示。请刷新页面后重试。', 0);
+							}
+						}
 					}
 
                     // 流结束后处理
@@ -530,6 +750,99 @@ if(!norunFlag){
 					}
 					setTimeout(function(){
 						loadlive2d("live2d", message_Path+"model/histoire/model.json");
+						
+						// 初始化情绪状态 - 如果没有设置过情绪状态，则设置为normal
+						if(!sessionStorage.getItem("live2dMood")) {
+							sessionStorage.setItem("live2dMood", "normal");
+						}
+						
+						// 添加微表情定时器 - 模拟人类自然的微表情变化
+						setInterval(function(){
+							// 获取当前情绪状态
+							var currentMood = sessionStorage.getItem("live2dMood") || "normal";
+							
+							// 微表情变化 - 眨眼、轻微点头等自然动作
+							if(Math.random() < 0.3) { // 30%概率做微表情
+								// 微表情不会改变当前情绪状态，只是短暂的表情变化
+								var microExpressions = {
+									"normal": ["眨眼", "微笑", "轻点头"],
+									"happy": ["眨眼", "大笑", "开心点头"],
+									"shy": ["眨眼", "低头", "侧脸"],
+									"surprised": ["眨眼", "张嘴", "后仰"],
+									"sad": ["眨眼", "叹气", "低头"]
+								};
+								
+								// 根据当前情绪选择合适的微表情
+								var availableExpressions = microExpressions[currentMood] || microExpressions["normal"];
+								var expression = availableExpressions[Math.floor(Math.random() * availableExpressions.length)];
+								
+								console.log('微表情: ' + expression + ' (情绪: ' + currentMood + ')');
+								
+								// 眨眼是所有情绪状态下都会有的自然动作，频率更高
+								if(expression === "眨眼") {
+									// 眨眼不显示表情符号，是非常自然的动作
+									$('#landlord').addClass('animated-blink');
+									setTimeout(function(){
+										$('#landlord').removeClass('animated-blink');
+									}, 300); // 眨眼动作很快
+								} else {
+									// 其他微表情可能会有轻微的动画效果
+									$('#landlord').addClass('animated-micro');
+									setTimeout(function(){
+										$('#landlord').removeClass('animated-micro');
+									}, 800);
+								}
+							}
+						}, 5000); // 微表情变化更频繁，5秒一次
+						
+						// 添加情绪变化定时器 - 模拟人类情绪的自然变化
+						setInterval(function(){
+							// 获取当前情绪状态
+							var currentMood = sessionStorage.getItem("live2dMood") || "normal";
+							
+							// 情绪自然变化 - 概率较低，避免情绪跳跃
+							if(Math.random() < 0.15) { // 15%概率改变情绪
+								// 情绪状态转换图 - 模拟情绪的自然流转
+								var moodTransitions = {
+									"normal": ["normal", "normal", "happy", "shy"], // 正常状态更可能保持或变得开心
+									"happy": ["happy", "happy", "normal", "surprised"], // 开心状态可能保持或回归正常
+									"shy": ["shy", "normal", "happy"], // 害羞后可能变正常或开心
+									"surprised": ["surprised", "normal", "happy"], // 惊讶后通常回归正常
+									"sad": ["sad", "normal"] // 悲伤后慢慢恢复正常
+								};
+								
+								// 获取当前情绪可能的转换状态
+								var possibleMoods = moodTransitions[currentMood] || ["normal"];
+								// 随机选择一个新情绪
+								var newMood = possibleMoods[Math.floor(Math.random() * possibleMoods.length)];
+								
+								// 如果情绪发生变化
+								if(newMood !== currentMood) {
+									console.log('情绪变化: ' + currentMood + ' -> ' + newMood);
+									
+									// 保存新的情绪状态
+									sessionStorage.setItem("live2dMood", newMood);
+									
+									// 显示情绪变化的表情
+									var moodEmojis = {
+										"normal": "😌",
+										"happy": "😊",
+										"shy": "😳",
+										"surprised": "😲",
+										"sad": "😢"
+									};
+									
+									// 显示情绪变化的表情
+									showMessage(moodEmojis[newMood], 1500);
+									
+									// 添加情绪对应的动画效果
+									$('#landlord').addClass('animated-' + newMood);
+									setTimeout(function(){
+										$('#landlord').removeClass('animated-' + newMood);
+									}, 1500);
+								}
+							}
+						}, 15000); // 情绪变化间隔较长，15秒一次
 					},1000);
 					initLive2d ();
 					images = null;
@@ -537,4 +850,82 @@ if(!norunFlag){
 			}
 		}
 	});
+	
+	// 添加CSS动画类 - 为不同情绪状态添加不同的动画效果
+	var style = document.createElement('style');
+	style.type = 'text/css';
+	style.innerHTML = `
+		/* 基础动画效果 */
+		.animated {
+			animation: shake 0.5s ease-in-out;
+		}
+		@keyframes shake {
+			0%, 100% { transform: translateX(0); }
+			25% { transform: translateX(-5px); }
+			75% { transform: translateX(5px); }
+		}
+		
+		/* 不同情绪状态的动画效果 */
+		.animated-normal {
+			animation: breathe 2s ease-in-out;
+		}
+		@keyframes breathe {
+			0%, 100% { transform: scale(1); }
+			50% { transform: scale(1.02); }
+		}
+		
+		.animated-happy {
+			animation: bounce 0.8s ease-in-out;
+		}
+		@keyframes bounce {
+			0%, 100% { transform: translateY(0); }
+			40% { transform: translateY(-10px); }
+			60% { transform: translateY(-5px); }
+		}
+		
+		.animated-shy {
+			animation: wiggle 1s ease-in-out;
+		}
+		@keyframes wiggle {
+			0%, 100% { transform: rotate(0deg); }
+			25% { transform: rotate(-2deg); }
+			75% { transform: rotate(2deg); }
+		}
+		
+		.animated-surprised {
+			animation: pop 0.5s ease-out;
+		}
+		@keyframes pop {
+			0% { transform: scale(1); }
+			50% { transform: scale(1.1); }
+			100% { transform: scale(1); }
+		}
+		
+		.animated-sad {
+			animation: droop 1.5s ease-in-out;
+		}
+		@keyframes droop {
+			0%, 100% { transform: translateY(0) rotate(0deg); }
+			50% { transform: translateY(5px) rotate(-1deg); }
+		}
+		
+		/* 微表情动画效果 */
+		.animated-blink {
+			animation: blink 0.3s ease-in-out;
+		}
+		@keyframes blink {
+			0%, 100% { transform: scaleY(1); }
+			50% { transform: scaleY(0.85); }
+		}
+		
+		.animated-micro {
+			animation: microMove 0.8s ease-in-out;
+		}
+		@keyframes microMove {
+			0%, 100% { transform: translateY(0) rotate(0deg); }
+			30% { transform: translateY(-3px) rotate(0.5deg); }
+			60% { transform: translateY(-1px) rotate(-0.5deg); }
+		}
+	`;
+	document.getElementsByTagName('head')[0].appendChild(style);
 }
