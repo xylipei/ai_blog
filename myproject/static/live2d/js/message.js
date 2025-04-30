@@ -158,21 +158,189 @@ if(!norunFlag){
 		showHitokoto();
 	},15000);
 	
+	// 获取页面内容的函数
+	function getPageContent() {
+		// 创建一个对象来存储页面信息
+		var pageInfo = {
+			title: document.title,
+			url: window.location.href,
+			headings: [],
+			mainText: "",
+			metaDescription: ""
+		};
+
+		// 获取meta描述
+		var metaDesc = document.querySelector('meta[name="description"]');
+		if (metaDesc) {
+			pageInfo.metaDescription = metaDesc.getAttribute('content');
+		}
+
+		// 获取所有标题
+		var headings = document.querySelectorAll('h1, h2, h3');
+		headings.forEach(function(heading) {
+			if (heading.textContent.trim() !== "") {
+				pageInfo.headings.push({
+					level: heading.tagName.toLowerCase(),
+					text: heading.textContent.trim()
+				});
+			}
+		});
+
+		// 获取主要内容
+		// 尝试找到主要内容区域 (通常在article, main, #content, .content等标签中)
+		var mainContent = document.querySelector('article, main, #content, .content, .post, .entry, .page-content');
+		if (mainContent) {
+			pageInfo.mainText = mainContent.textContent.trim().substring(0, 1000); // 限制长度
+		} else {
+			// 如果找不到明确的内容区域，获取body中的所有段落文本
+			var paragraphs = document.querySelectorAll('p');
+			var allText = "";
+			paragraphs.forEach(function(p) {
+				if (p.textContent.trim().length > 20) { // 只获取有意义的段落
+					allText += p.textContent.trim() + "\n";
+				}
+			});
+			pageInfo.mainText = allText.substring(0, 1000); // 限制长度
+		}
+
+		return pageInfo;
+	}
+
+	// 使用大模型介绍页面内容
+	function introducePageContent() {
+		if (!talkAPI || talkAPI === "") {
+			console.warn("未配置talkAPI，无法介绍页面内容");
+			return;
+		}
+
+		var pageInfo = getPageContent();
+		var userid_ = sessionStorage.getItem("live2duser") || "visitor";
+
+		// 构建提示信息
+		var prompt = "请简单介绍一下我正在浏览的页面内容。页面信息如下：\n";
+		prompt += "标题：" + pageInfo.title + "\n";
+		
+		if (pageInfo.metaDescription) {
+			prompt += "描述：" + pageInfo.metaDescription + "\n";
+		}
+
+		if (pageInfo.headings.length > 0) {
+			prompt += "主要标题：\n";
+			pageInfo.headings.slice(0, 3).forEach(function(heading) { // 最多显示3个标题
+				prompt += "- " + heading.text + "\n";
+			});
+		}
+
+		if (pageInfo.mainText) {
+			prompt += "页面内容摘要：" + pageInfo.mainText.substring(0, 300) + "...\n";
+		}
+
+		// 显示思考中的消息
+		showMessage('我正在了解这个页面...', 0);
+
+		// 调用API获取页面介绍
+		fetch(talkAPI, {
+			method: 'POST',
+			headers: {
+				'X-CSRFToken': csrftoken,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				"message": prompt,
+				"userid": userid_,
+				"context": "page_introduction"
+			})
+		})
+		.then(response => {
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			return response.body.getReader();
+		})
+		.then(reader => {
+			const decoder = new TextDecoder('utf-8', { fatal: false });
+			let currentMessage = '';
+			$('.message').fadeTo(200, 1);
+
+			function readStream() {
+				return reader.read().then(({ done, value }) => {
+					if (done) {
+						return;
+					}
+
+					try {
+						const chunk = decoder.decode(value, { stream: true });
+						const cleanedChunk = chunk
+							.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+							.replace(/[\x7F-\x9F]/g, '')
+							.replace(/\uFFFD/g, '');
+						
+						currentMessage += cleanedChunk;
+						
+						let displayContent = currentMessage;
+						if (typeof marked === 'function') {
+							try {
+								displayContent = marked.parse(currentMessage, { 
+									sanitize: true,
+									breaks: true,
+									gfm: true
+								});
+							} catch (e) {
+								displayContent = currentMessage
+									.replace(/&/g, '&amp;')
+									.replace(/</g, '&lt;')
+									.replace(/>/g, '&gt;')
+									.replace(/"/g, '&quot;')
+									.replace(/\n/g, '<br>');
+							}
+						} else {
+							displayContent = currentMessage
+								.replace(/&/g, '&amp;')
+								.replace(/</g, '&lt;')
+								.replace(/>/g, '&gt;')
+								.replace(/"/g, '&quot;')
+								.replace(/\n/g, '<br>');
+						}
+						
+						$('.message').html(displayContent);
+						talkValTimer();
+						
+						return readStream();
+					} catch (error) {
+						console.error('解码错误:', error);
+						showMessage('抱歉，我无法正确解析页面内容。', 0);
+					}
+				});
+			}
+
+			return readStream();
+		})
+		.catch(error => {
+			console.error('获取页面介绍失败:', error);
+			showMessage('抱歉，我无法获取页面的介绍信息。', 0);
+		});
+	}
+
 	function showHitokoto(){
 		if(sessionStorage.getItem("Sleepy")!=="1"){
 			if(!AITalkFlag){
-				// 随机决定是否显示一个动作或表情
+				// 随机决定行为：一言、表情或页面介绍
 				var randomAction = Math.random();
-				if(randomAction < 0.3) {
-					// 30%概率做一个随机动作
-					var actions = ['normal', 'happy', 'shy', 'wink', 'surprised', 'sad'];
-					var randomIndex = Math.floor(Math.random() * actions.length);
-					// 如果live2d模型支持表情切换，可以在这里调用
-					console.log('随机表情: ' + actions[randomIndex]);
-					// 这里可以添加表情切换的代码
+				
+				// 15%概率介绍页面内容（如果不是首页）
+				if(randomAction < 0.15 && window.location.href !== home_Path) {
+					introducePageContent();
+					return;
 				}
 				
-				// 70%概率获取一言
+				// 25%概率做一个随机动作
+				if(randomAction < 0.4) {
+					var actions = ['normal', 'happy', 'shy', 'wink', 'surprised', 'sad'];
+					var randomIndex = Math.floor(Math.random() * actions.length);
+					console.log('随机表情: ' + actions[randomIndex]);
+				}
+				
+				// 60%概率获取一言
 				$.getJSON('https://v1.hitokoto.cn/',function(result){
 					talkValTimer();
 					// 添加表情符号增强情感表达
@@ -536,6 +704,26 @@ if(!norunFlag){
 			$('#showTalkBtn').hide();
 			
 		}
+
+		// 添加页面介绍按钮
+		$('#landlord').append('<div id="pageInfoBtn" class="live_ico_item" title="介绍页面内容"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6z"></path></svg></div>');
+		// 添加页面介绍按钮的样式
+		var style = document.createElement('style');
+		style.innerHTML = `
+			#pageInfoBtn {
+				margin-bottom: 10px;
+				animation: breath 0.8s ease-in-out infinite alternate;
+				color: #0099cc;
+			}
+			#pageInfoBtn:hover {
+				color: #33ccff;
+				transform: scale(1.1);
+			}
+		`;
+		document.head.appendChild(style);
+		$('#pageInfoBtn').on('click', function(){
+			introducePageContent();
+		});
 		//获取音乐信息初始化
 		var bgmListInfo = $('input[name=live2dBGM]');
 		if(bgmListInfo.length == 0){
