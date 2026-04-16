@@ -40,7 +40,13 @@
    cd myproject
    python manage.py migrate
    python manage.py runserver
+   
+   # 创建管理员账号
+   cd myproject
+   python manage.py createsuperuser
    ```
+   
+   
 
 5. 访问网站:
    浏览器中打开 http://127.0.0.1:8000/

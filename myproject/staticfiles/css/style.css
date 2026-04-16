@@ -1,19 +1,29 @@
-/* 全局样式 */
+/* 全局样式 — 设计令牌 */
 :root {
+    --color-bg: #f9f9fb;
+    --color-surface: #ffffff;
+    --color-text: #333333;
+    --color-muted: #868e96;
+    --color-border: rgba(0, 0, 0, 0.08);
+    --font-sans: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --radius-card: 12px;
+    --radius-pill: 999px;
+    --shadow-card: 0 10px 20px rgba(0, 0, 0, 0.05);
+    --shadow-hover: 0 15px 30px rgba(0, 0, 0, 0.1);
     --primary-color: #6f42c1;
     --secondary-color: #4582ec;
     --dark-color: #343a40;
     --light-color: #f8f9fa;
     --gray-color: #868e96;
-    --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-    --hover-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    --card-shadow: var(--shadow-card);
+    --hover-shadow: var(--shadow-hover);
 }
 
 body {
-    font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-sans);
     line-height: 1.7;
-    color: #333;
-    background-color: #f9f9fb;
+    color: var(--color-text);
+    background-color: var(--color-bg);
 }
 
 a {
@@ -27,6 +37,11 @@ a:hover {
 }
 
 /* 导航栏 */
+.navbar-blog {
+    backdrop-filter: saturate(140%) blur(8px);
+    background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
 .navbar {
     padding: 15px 0;
     background-color: rgba(255, 255, 255, 0.95) !important;
@@ -75,7 +90,7 @@ a:hover {
 /* 卡片样式 */
 .card {
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-card);
     overflow: hidden;
     box-shadow: var(--card-shadow);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -298,8 +313,9 @@ footer h5 {
 
 /* 首页横幅 */
 .main-banner {
-    background: linear-gradient(135deg, #6f42c1 0%, #4582ec 100%);
-    padding: 80px 0;
+    /* background: linear-gradient(135deg, #6f42c1 0%, #4582ec 100%); */
+    padding-top: 50px;
+    padding-bottom: 40px;
     margin-bottom: 40px;
     color: white;
     border-radius: 0 0 50% 50% / 15%;
@@ -314,4 +330,65 @@ footer h5 {
 .main-banner p {
     font-size: 1.2rem;
     opacity: 0.9;
+}
+
+/* 正文与列表 */
+.main-column {
+    min-width: 0;
+}
+
+.blog-prose {
+    max-width: 48rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.blog-prose img {
+    max-width: 100%;
+    height: auto;
+}
+
+.featured-image {
+    max-height: 28rem;
+    object-fit: contain;
+}
+
+.post-excerpt-clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.card-thumb-placeholder {
+    height: 200px;
+}
+
+.tag-pill {
+    background-color: rgba(111, 66, 193, 0.12);
+    color: var(--primary-color);
+    font-weight: 500;
+    padding: 0.35rem 0.65rem;
+    text-decoration: none;
+}
+
+.tag-pill:hover {
+    background-color: rgba(111, 66, 193, 0.22);
+    color: var(--primary-color);
+}
+
+/* Live2D：避免遮挡移动端底部操作，小屏默认收起聊天输入条 */
+@media (max-width: 767.98px) {
+    #landlord {
+        z-index: 1030;
+        left: 0 !important;
+    }
+
+    #landlord .live2d-chat-input {
+        display: none !important;
+    }
+
+    #open_live2d {
+        display: block;
+    }
 }

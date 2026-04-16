@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}文章归档 - {% if site_profile %}{{ site_profile.site_name }}{% else %}MyBlog{% endif %}{% endblock %}
+
+{% block banner %}
+<div class="main-banner">
+    <div class="container text-center">
+        <h1>文章归档</h1>
+        <p class="lead">按月份浏览历史文章</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        {% if archive_dates %}
+            <ul class="list-unstyled mb-0">
+                {% for d in archive_dates %}
+                    <li class="mb-3 pb-3 border-bottom">
+                        <a href="{% url 'archive_month' d.year d.month %}" class="fs-5">
+                            <i class="bi bi-calendar3 me-2"></i>{{ d|date:"Y 年 n 月" }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted mb-0">暂无已发布文章。</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}关于 - {% if site_profile %}{{ site_profile.site_name }}{% else %}MyBlog{% endif %}{% endblock %}
+
+{% block banner %}
+<div class="main-banner">
+    <div class="container text-center">
+        <h1>关于</h1>
+        <p class="lead">{% if site_profile %}{{ site_profile.tagline }}{% else %}感谢访问{% endif %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body blog-prose">
+        {% if site_profile and site_profile.about_page_html %}
+            {{ site_profile.about_page_html|safe }}
+        {% else %}
+            <p>这是个人博客站点。请在后台「站点信息」中编辑关于页内容。</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

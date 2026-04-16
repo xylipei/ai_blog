@@ -3,6 +3,15 @@ if(typeof home_Path === 'undefined') {
 	var home_Path = document.location.protocol +'//' + window.document.location.hostname +'/';
 }
 
+// 语音合成配置
+var speechEnabled = true; // 是否启用语音
+var speechVolume = 1.0; // 音量 0-1
+var speechRate = 1.0; // 语速 0.1-10
+var speechPitch = 1.0; // 音调 0-2
+var speechVoice = null; // 语音声音
+var speechLang = 'zh-CN'; // 语音语言
+var currentUtterance = null; // 当前正在播放的语音
+
 var userAgent = window.navigator.userAgent.toLowerCase();
 console.log(userAgent);
 var norunAI = [ "android", "iphone", "ipod", "ipad", "windows phone", "mqqbrowser" ,"msie","trident/7.0"];
@@ -27,6 +36,91 @@ if(!norunFlag){
 	var sleepTimer_ = null;
 	var AITalkFlag = false;
 	var talkNum = 0;
+	
+	// 初始化语音合成
+	function initSpeechSynthesis() {
+		// 检查浏览器是否支持语音合成
+		if ('speechSynthesis' in window) {
+			console.log('语音合成已初始化');
+			
+			// 获取可用的语音列表
+			window.speechSynthesis.onvoiceschanged = function() {
+				var voices = window.speechSynthesis.getVoices();
+				// 尝试找到中文语音
+				for (var i = 0; i < voices.length; i++) {
+					if (voices[i].lang.indexOf('zh') !== -1) {
+						speechVoice = voices[i];
+						console.log('已选择语音：', speechVoice.name);
+						break;
+					}
+				}
+				
+				// 如果没有找到中文语音，使用默认语音
+				if (!speechVoice && voices.length > 0) {
+					speechVoice = voices[0];
+					console.log('未找到中文语音，使用默认语音：', speechVoice.name);
+				}
+			};
+			
+			// 触发voices加载
+			window.speechSynthesis.getVoices();
+		} else {
+			console.warn('当前浏览器不支持语音合成');
+			speechEnabled = false;
+		}
+	}
+	
+	// 语音播报函数
+	function speakText(text) {
+		// 如果语音未启用或浏览器不支持，直接返回
+		if (!speechEnabled || !('speechSynthesis' in window)) {
+			return;
+		}
+		
+		// 如果有正在播放的语音，先停止
+		if (currentUtterance) {
+			window.speechSynthesis.cancel();
+		}
+		
+		// 创建一个新的语音实例
+		var utterance = new SpeechSynthesisUtterance();
+		
+		// 去除HTML标签，只保留纯文本
+		var tempDiv = document.createElement('div');
+		tempDiv.innerHTML = text;
+		utterance.text = tempDiv.textContent || tempDiv.innerText || '';
+		
+		// 设置语音参数
+		utterance.volume = speechVolume; // 音量
+		utterance.rate = speechRate;     // 语速
+		utterance.pitch = speechPitch;   // 音调
+		utterance.lang = speechLang;     // 语言
+		
+		// 如果有可用的语音，设置语音
+		if (speechVoice) {
+			utterance.voice = speechVoice;
+		}
+		
+		// 保存当前语音实例
+		currentUtterance = utterance;
+		
+		// 播放语音
+		window.speechSynthesis.speak(utterance);
+		
+		// 语音播放结束后清除当前语音实例
+		utterance.onend = function() {
+			currentUtterance = null;
+		};
+		
+		// 语音播放错误处理
+		utterance.onerror = function(event) {
+			console.error('语音播放错误:', event);
+			currentUtterance = null;
+		};
+	}
+	
+	// 初始化语音合成
+	initSpeechSynthesis();
 	(function (){
 		function renderTip(template, context) {
 			var tokenReg = /(\\)?\{([^\{\}\\]+)(\\)?\}/g;
@@ -139,7 +233,7 @@ if(!norunFlag){
 				} else if (now > 14 && now <= 17) {
 					text = '午后很容易犯困呢，今天的运动目标完成了吗？';
 				} else if (now > 17 && now <= 19) {
-					text = '傍晚了！窗外夕阳的景色很美丽呢，最美不过夕阳红~~';
+					text = '傍晚了！窗外 sunset 的景色很美丽呢，最美不过 sunset red~~';
 				} else if (now > 19 && now <= 21) {
 					text = '晚上好，今天过得怎么样？';
 				} else if (now > 21 && now <= 23) {
@@ -262,9 +356,24 @@ if(!norunFlag){
 			let currentMessage = '';
 			$('.message').fadeTo(200, 1);
 
+			// 如果有正在播放的语音，先停止
+			if (currentUtterance) {
+				window.speechSynthesis.cancel();
+				currentUtterance = null;
+			}
+
+			// 用于存储完整的响应文本，用于语音播报
+			let fullResponseText = '';
+
 			function readStream() {
 				return reader.read().then(({ done, value }) => {
 					if (done) {
+						// 流结束后，播放完整的响应文本
+						if (speechEnabled && fullResponseText) {
+							// 过滤掉表情符号和特殊字符，提高语音质量
+							var cleanText = fullResponseText.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]/g, '');
+							speakText(cleanText);
+						}
 						return;
 					}
 
@@ -276,6 +385,9 @@ if(!norunFlag){
 							.replace(/\uFFFD/g, '');
 						
 						currentMessage += cleanedChunk;
+						
+						// 更新用于语音播报的完整文本
+						fullResponseText = $('<div>').html(currentMessage).text();
 						
 						let displayContent = currentMessage;
 						if (typeof marked === 'function') {
@@ -328,7 +440,7 @@ if(!norunFlag){
 				var randomAction = Math.random();
 				
 				// 15%概率介绍页面内容（如果不是首页）
-				if(randomAction < 0.15 && window.location.href !== home_Path) {
+				if(randomAction < 0.05 && window.location.href !== home_Path) {
 					introducePageContent();
 					return;
 				}
@@ -379,7 +491,7 @@ if(!norunFlag){
 			var welcomeMessages = [
 				'你回来啦~ 我好想你！',
 				'哇，终于等到你了！',
-				'欢迎回来！我刚才在想你呢~',
+				'欢迎回来！我刚刚在想你呢~',
 				'你好啊！今天过得怎么样？',
 				'嘿！我正好有事想和你聊聊！',
 				'太好了，你回来了！'
@@ -408,6 +520,16 @@ if(!norunFlag){
 			console.error('Error parsing Markdown:', e);
 			// Fallback to original text if parsing fails
 			processedText = text;
+		}
+
+		// 播放语音
+		if (speechEnabled) {
+			// 提取纯文本用于语音播报
+			var speechText = $('<div>').html(text).text();
+			// 过滤掉表情符号和特殊字符，提高语音质量
+			speechText = speechText.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]/g, '');
+			// 调用语音合成
+			speakText(speechText);
 		}
 
 		// 添加打字机效果
@@ -461,6 +583,199 @@ if(!norunFlag){
 	}
 	
 	function initLive2d (){
+		// 添加语音控制面板
+		var speechControlHtml = `
+		<div class="live2d-speech-control" style="display:none; position:absolute; bottom:5px; left:0; right:0; background:rgba(255,255,255,0.95); border-radius:12px; padding:15px; z-index:10; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.15); backdrop-filter:blur(5px); transition:all 0.3s ease;">
+			<div style="margin-bottom:12px; display:flex; align-items:center; justify-content:center;">
+				<label class="speech-toggle" style="position:relative; display:inline-block; width:50px; height:24px; margin-right:10px;">
+					<input type="checkbox" id="live2d-speech-enabled" ${speechEnabled ? 'checked' : ''} style="opacity:0; width:0; height:0;">
+					<span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#ccc; transition:.4s; border-radius:24px;">
+						<span style="position:absolute; content:''; height:16px; width:16px; left:4px; bottom:4px; background-color:white; transition:.4s; border-radius:50%; transform:${speechEnabled ? 'translateX(26px)' : 'translateX(0)'}"></span>
+					</span>
+				</label>
+				<span style="font-weight:500; color:#333;">启用语音</span>
+			</div>
+			<div style="margin-bottom:12px;">
+				<div style="display:flex; align-items:center; margin-bottom:6px;">
+					<label style="flex:1; text-align:left; font-size:13px; color:#555;">音量</label>
+					<span style="font-size:12px; color:#888; margin-left:5px;">${Math.round(speechVolume * 100)}%</span>
+				</div>
+				<input type="range" id="live2d-speech-volume" min="0" max="1" step="0.1" value="${speechVolume}" 
+					style="width:100%; height:5px; border-radius:5px; -webkit-appearance:none; background:linear-gradient(to right, #4e9eff ${speechVolume*100}%, #e0e0e0 ${speechVolume*100}%);">
+			</div>
+			<div style="margin-bottom:12px;">
+				<div style="display:flex; align-items:center; margin-bottom:6px;">
+					<label style="flex:1; text-align:left; font-size:13px; color:#555;">语速</label>
+					<span style="font-size:12px; color:#888; margin-left:5px;">${speechRate}x</span>
+				</div>
+				<input type="range" id="live2d-speech-rate" min="0.5" max="2" step="0.1" value="${speechRate}" 
+					style="width:100%; height:5px; border-radius:5px; -webkit-appearance:none; background:linear-gradient(to right, #4e9eff ${(speechRate-0.5)/1.5*100}%, #e0e0e0 ${(speechRate-0.5)/1.5*100}%);">
+			</div>
+			<div style="margin-bottom:12px;">
+				<div style="display:flex; align-items:center; margin-bottom:6px;">
+					<label style="flex:1; text-align:left; font-size:13px; color:#555;">音调</label>
+					<span style="font-size:12px; color:#888; margin-left:5px;">${speechPitch}x</span>
+				</div>
+				<input type="range" id="live2d-speech-pitch" min="0.5" max="2" step="0.1" value="${speechPitch}" 
+					style="width:100%; height:5px; border-radius:5px; -webkit-appearance:none; background:linear-gradient(to right, #4e9eff ${(speechPitch-0.5)/1.5*100}%, #e0e0e0 ${(speechPitch-0.5)/1.5*100}%);">
+			</div>
+			<div style="margin-top:15px; display:flex; justify-content:space-between;">
+				<button id="live2d-speech-test" style="flex:1; padding:8px 0; margin-right:8px; background:#4e9eff; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:500; transition:all 0.2s ease; box-shadow:0 2px 5px rgba(78,158,255,0.3);">测试语音</button>
+				<button id="live2d-speech-close" style="flex:1; padding:8px 0; background:#f5f5f5; color:#555; border:none; border-radius:6px; cursor:pointer; font-weight:500; transition:all 0.2s ease;">关闭</button>
+			</div>
+		</div>
+		`;
+		
+		// 添加语音设置按钮
+		var speechSettingButton = `<button id="live2d-speech-setting" style="position:absolute; bottom:5px; right:5px; background:rgba(255,255,255,0.7); border:none; color:#4e9eff; font-size:20px; cursor:pointer; z-index:9; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.1); transition:all 0.2s ease;">🔊</button>`;
+		
+		// 添加滑块样式
+		var sliderStyle = document.createElement('style');
+		sliderStyle.innerHTML = `
+			/* 滑块样式 */
+			input[type=range] {
+				-webkit-appearance: none;
+				margin: 10px 0;
+				width: 100%;
+			}
+			input[type=range]:focus {
+				outline: none;
+			}
+			input[type=range]::-webkit-slider-runnable-track {
+				width: 100%;
+				height: 5px;
+				cursor: pointer;
+				background: #e0e0e0;
+				border-radius: 5px;
+			}
+			input[type=range]::-webkit-slider-thumb {
+				height: 16px;
+				width: 16px;
+				border-radius: 50%;
+				background: #4e9eff;
+				cursor: pointer;
+				-webkit-appearance: none;
+				margin-top: -5.5px;
+				box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+				transition: all 0.2s ease;
+			}
+			input[type=range]::-webkit-slider-thumb:hover {
+				background: #3d8eff;
+				transform: scale(1.1);
+			}
+			/* 开关按钮悬停效果 */
+			#live2d-speech-setting:hover {
+				background: rgba(255,255,255,0.9);
+				color: #3d8eff;
+				transform: scale(1.05);
+			}
+			/* 控制面板按钮悬停效果 */
+			#live2d-speech-test:hover {
+				background: #3d8eff;
+				transform: translateY(-2px);
+				box-shadow: 0 4px 8px rgba(78,158,255,0.4);
+			}
+			#live2d-speech-close:hover {
+				background: #ebebeb;
+				transform: translateY(-2px);
+			}
+		`;
+		document.head.appendChild(sliderStyle);
+		
+		// 将控制面板和按钮添加到landlord元素中
+		$('#landlord').append(speechControlHtml);
+		$('#landlord').append(speechSettingButton);
+		
+		// 绑定语音控制面板事件
+		$('#live2d-speech-setting').on('click', function() {
+			$('.live2d-speech-control').slideToggle(200);
+		});
+		
+		$('#live2d-speech-close').on('click', function() {
+			$('.live2d-speech-control').slideUp(200);
+		});
+		
+		$('#live2d-speech-enabled').on('change', function() {
+			speechEnabled = $(this).prop('checked');
+			localStorage.setItem('live2d-speech-enabled', speechEnabled ? '1' : '0');
+			// 更新开关按钮样式
+			$(this).next().find('span').css('transform', speechEnabled ? 'translateX(26px)' : 'translateX(0)');
+		});
+		
+		$('#live2d-speech-volume').on('input', function() {
+			speechVolume = parseFloat($(this).val());
+			localStorage.setItem('live2d-speech-volume', speechVolume);
+			// 更新滑块背景和显示值
+			$(this).css('background', `linear-gradient(to right, #4e9eff ${speechVolume*100}%, #e0e0e0 ${speechVolume*100}%)`);
+			$(this).parent().find('div:first').find('span:last').text(`${Math.round(speechVolume * 100)}%`);
+		});
+		
+		$('#live2d-speech-rate').on('input', function() {
+			speechRate = parseFloat($(this).val());
+			localStorage.setItem('live2d-speech-rate', speechRate);
+			// 更新滑块背景和显示值
+			$(this).css('background', `linear-gradient(to right, #4e9eff ${(speechRate-0.5)/1.5*100}%, #e0e0e0 ${(speechRate-0.5)/1.5*100}%)`);
+			$(this).parent().find('div:first').find('span:last').text(`${speechRate}x`);
+		});
+		
+		$('#live2d-speech-pitch').on('input', function() {
+			speechPitch = parseFloat($(this).val());
+			localStorage.setItem('live2d-speech-pitch', speechPitch);
+			// 更新滑块背景和显示值
+			$(this).css('background', `linear-gradient(to right, #4e9eff ${(speechPitch-0.5)/1.5*100}%, #e0e0e0 ${(speechPitch-0.5)/1.5*100}%)`);
+			$(this).parent().find('div:first').find('span:last').text(`${speechPitch}x`);
+		});
+		
+		$('#live2d-speech-test').on('click', function() {
+			if (speechEnabled) {
+				speakText('语音测试，当前设置音量' + speechVolume + '，语速' + speechRate + '，音调' + speechPitch);
+			} else {
+				alert('请先启用语音功能');
+			}
+		});
+		
+		// 从localStorage加载语音设置
+		function loadSpeechSettings() {
+			var enabled = localStorage.getItem('live2d-speech-enabled');
+			if (enabled !== null) {
+				speechEnabled = enabled === '1';
+				$('#live2d-speech-enabled').prop('checked', speechEnabled);
+				// 更新开关按钮样式
+				$('#live2d-speech-enabled').next().find('span').css('transform', speechEnabled ? 'translateX(26px)' : 'translateX(0)');
+			}
+			
+			var volume = localStorage.getItem('live2d-speech-volume');
+			if (volume !== null) {
+				speechVolume = parseFloat(volume);
+				$('#live2d-speech-volume').val(speechVolume);
+				// 更新滑块背景和显示值
+				$('#live2d-speech-volume').css('background', `linear-gradient(to right, #4e9eff ${speechVolume*100}%, #e0e0e0 ${speechVolume*100}%)`);
+				$('#live2d-speech-volume').parent().find('div:first').find('span:last').text(`${Math.round(speechVolume * 100)}%`);
+			}
+			
+			var rate = localStorage.getItem('live2d-speech-rate');
+			if (rate !== null) {
+				speechRate = parseFloat(rate);
+				$('#live2d-speech-rate').val(speechRate);
+				// 更新滑块背景和显示值
+				$('#live2d-speech-rate').css('background', `linear-gradient(to right, #4e9eff ${(speechRate-0.5)/1.5*100}%, #e0e0e0 ${(speechRate-0.5)/1.5*100}%)`);
+				$('#live2d-speech-rate').parent().find('div:first').find('span:last').text(`${speechRate}x`);
+			}
+			
+			var pitch = localStorage.getItem('live2d-speech-pitch');
+			if (pitch !== null) {
+				speechPitch = parseFloat(pitch);
+				$('#live2d-speech-pitch').val(speechPitch);
+				// 更新滑块背景和显示值
+				$('#live2d-speech-pitch').css('background', `linear-gradient(to right, #4e9eff ${(speechPitch-0.5)/1.5*100}%, #e0e0e0 ${(speechPitch-0.5)/1.5*100}%)`);
+				$('#live2d-speech-pitch').parent().find('div:first').find('span:last').text(`${speechPitch}x`);
+			}
+		}
+		
+		// 加载语音设置
+		loadSpeechSettings();
+		
+		// 原有的Live2D控制按钮
 		$('#hideButton').on('click', function(){
 			if(AIFadeFlag){
 				return false;
@@ -541,8 +856,17 @@ if(!norunFlag){
 					showMessage('聊之前请告诉我你的名字吧！',0);
 					return;
 				}
+				// 保存用户名到sessionStorage
+				sessionStorage.setItem("live2duser", userid_);
+				
 				showMessage('思考中~', 0);
 				$('.message').html(''); // 清空之前的消息
+				
+				// 如果有正在播放的语音，先停止
+				if (currentUtterance) {
+					window.speechSynthesis.cancel();
+					currentUtterance = null;
+				}
 
 				try {
 					const response = await fetch(talkAPI, {
@@ -576,9 +900,18 @@ if(!norunFlag){
                     let currentMessage = '';
                     $('.message').fadeTo(200, 1); // 确保消息框可见
 
+					// 用于存储完整的响应文本，用于语音播报
+					let fullResponseText = '';
+					
 					while (true) {
 						const { done, value } = await reader.read();
 						if (done) {
+							// 流结束后，播放完整的响应文本
+							if (speechEnabled && fullResponseText) {
+								// 过滤掉表情符号和特殊字符，提高语音质量
+								var cleanText = fullResponseText.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27FF]/g, '');
+								speakText(cleanText);
+							}
 							break;
 						}
 						// 解码时处理流式数据
@@ -594,6 +927,9 @@ if(!norunFlag){
 								.replace(/\uFFFD/g, '');                           // 移除Unicode替换字符(常见乱码标志)
 							
 							currentMessage += cleanedChunk;
+							
+							// 更新用于语音播报的完整文本
+							fullResponseText = $('<div>').html(currentMessage).text();
 							
 							// 检查是否包含错误标识
 							if (currentMessage.startsWith("Error:")) {
@@ -943,3 +1279,210 @@ if(!norunFlag){
 		document.getElementsByTagName('head')[0].appendChild(style);
 	});
 }
+
+
+// 全局动作控制方法
+// 说明：
+// - 在不修改 live2d.js 的前提下，优先通过向 canvas 触发一次“点击/点按”事件，调起模型内置的 tap 动作。
+// - 对于情绪类动作（happy/shy/surprised/sad/wink），提供 UI 级别的表情与轻微动画反馈。
+// - 该方法不会破坏现有逻辑，未找到模型或不支持时会优雅降级并给出日志提示。
+/**
+ * 控制 Live2D 动作的统一入口
+ * 用法示例：
+ *   window.live2dAction('tap');                // 触发一次 tap 动作（最通用）
+ *   window.live2dAction('randomTap');         // 同上，别名
+ *   window.live2dAction('tap:3');             // 连续触发 3 次 tap（有些模型会随机播放不同动作）
+ *   window.live2dAction('happy');             // 显示“开心”表情并轻微抖动
+ *   window.live2dAction('shy', {message:'害羞啦~'}); // 自定义提示文本
+ *
+ * @param {string} action - 动作名称：tap/randomTap/tap:N 或 happy|shy|surprised|sad|wink
+ * @param {{duration?: number, message?: string}} [options]
+ * @returns {boolean} 是否成功发起动作（不代表模型一定有对应动画）
+ */
+window.live2dAction = function(action, options){
+	try{
+		options = options || {};
+		var duration = typeof options.duration === 'number' ? options.duration : 1000;
+		var customMsg = options.message;
+		var canvas = document.getElementById('live2d');
+		var landlord = document.getElementById('landlord');
+
+		// 触发一次 tap：很多 Live2D 实现会在 canvas 的点击事件中调用随机 tap 动作
+		function triggerTapOnce(){
+			if(!canvas){
+				console.warn('[live2dAction] 未找到 #live2d 画布，无法触发 tap');
+				return false;
+			}
+			try{
+				['mousedown','mouseup','click','touchstart','touchend'].forEach(function(type){
+					var e;
+					if(type.indexOf('touch') === 0){
+						e = new TouchEvent(type, {bubbles:true, cancelable:true});
+					}else{
+						e = new MouseEvent(type, {bubbles:true, cancelable:true, view:window});
+					}
+					canvas.dispatchEvent(e);
+				});
+				return true;
+			}catch(err){
+				console.error('[live2dAction] 触发 tap 失败:', err);
+				return false;
+			}
+		}
+
+		// 轻微抖动动画
+		function shake(){
+			if(!landlord) return;
+			landlord.classList.add('animated');
+			setTimeout(function(){ landlord.classList.remove('animated'); }, Math.max(300, duration));
+		}
+
+		// 情绪到表情映射
+		var emojiMap = {
+			happy: '😊',
+			shy: '😳',
+			surprised: '😲',
+			sad: '😢',
+			wink: '😉'
+		};
+
+		// 处理 tap 类动作
+		if(action === 'tap' || action === 'randomTap'){
+			return triggerTapOnce();
+		}
+		var tapTimesMatch = /^tap[:\(](\d+)[\)]?$/.exec(action);
+		if(tapTimesMatch){
+			var times = Math.min(10, Math.max(1, parseInt(tapTimesMatch[1], 10) || 1));
+			var ok = false;
+			for(var i=0;i<times;i++){
+				setTimeout(function(){ ok = triggerTapOnce() || ok; }, i*120);
+			}
+			return ok;
+		}
+
+		// 处理情绪类动作（UI 级反馈 + 提示）
+		if(emojiMap[action]){
+			var tip = customMsg || emojiMap[action];
+			try { showMessage(tip, duration); } catch(_) { /* 忽略消息系统未初始化的情况 */ }
+			shake();
+			return true;
+		}
+
+		console.warn('[live2dAction] 未识别的动作:', action);
+		return false;
+	}catch(e){
+		console.error('[live2dAction] 执行动作异常:', e);
+		return false;
+	}
+};
+
+/**
+ * 只读方法：判断 Live2D 画布是否已就绪
+ * @returns {boolean}
+ */
+window.live2dIsReady = function(){
+	var c = document.getElementById('live2d');
+	return !!(c && c.width > 0 && c.height > 0);
+};
+// 
+// 全局动作控制方法
+// 说明：
+// - 在不修改 live2d.js 的前提下，优先通过向 canvas 触发一次“点击/点按”事件，调起模型内置的 tap 动作。
+// - 对于情绪类动作（happy/shy/surprised/sad/wink），提供 UI 级别的表情与轻微动画反馈。
+// - 该方法不会破坏现有逻辑，未找到模型或不支持时会优雅降级并给出日志提示。
+/**
+ * 控制 Live2D 动作的统一入口
+ * 用法示例：
+ *   window.live2dAction('tap');                // 触发一次 tap 动作（最通用）
+ *   window.live2dAction('randomTap');         // 同上，别名
+ *   window.live2dAction('tap:3');             // 连续触发 3 次 tap（有些模型会随机播放不同动作）
+ *   window.live2dAction('happy');             // 显示“开心”表情并轻微抖动
+ *   window.live2dAction('shy', {message:'害羞啦~'}); // 自定义提示文本
+ *
+ * @param {string} action - 动作名称：tap/randomTap/tap:N 或 happy|shy|surprised|sad|wink
+ * @param {{duration?: number, message?: string}} [options]
+ * @returns {boolean} 是否成功发起动作（不代表模型一定有对应动画）
+ */
+window.live2dAction = function(action, options){
+	try{
+		options = options || {};
+		var duration = typeof options.duration === 'number' ? options.duration : 1000;
+		var customMsg = options.message;
+		var canvas = document.getElementById('live2d');
+		var landlord = document.getElementById('landlord');
+
+		// 触发一次 tap：很多 Live2D 实现会在 canvas 的点击事件中调用随机 tap 动作
+		function triggerTapOnce(){
+			if(!canvas){
+				console.warn('[live2dAction] 未找到 #live2d 画布，无法触发 tap');
+				return false;
+			}
+			try{
+				['mousedown','mouseup','click'].forEach(function(type){
+					var e = new MouseEvent(type, {bubbles:true, cancelable:true, view:window});
+					canvas.dispatchEvent(e);
+				});
+				return true;
+			}catch(err){
+				console.error('[live2dAction] 触发 tap 失败:', err);
+				return false;
+			}
+		}
+
+		// 轻微抖动动画
+		function shake(){
+			if(!landlord) return;
+			landlord.classList.add('animated');
+			setTimeout(function(){ landlord.classList.remove('animated'); }, Math.max(300, duration));
+		}
+
+		// 情绪到表情映射
+		var emojiMap = {
+			happy: '😊',
+			shy: '😳',
+			surprised: '😲',
+			sad: '😢',
+			wink: '😉'
+		};
+
+		// 处理 tap 类动作
+		if(action === 'tap' || action === 'randomTap'){
+			return triggerTapOnce();
+		}
+		var tapTimesMatch = /^tap[:\(](\d+)[\)]?$/.exec(action);
+		if(tapTimesMatch){
+			var times = Math.min(10, Math.max(1, parseInt(tapTimesMatch[1], 10) || 1));
+			var ok = false;
+			for(var i=0;i<times;i++){
+				setTimeout(function(){ ok = triggerTapOnce() || ok; }, i*120);
+			}
+			return ok;
+		}
+
+		// 处理情绪类动作（UI 级反馈 + 提示）
+		if(emojiMap[action]){
+			var tip = customMsg || emojiMap[action];
+			try { showMessage(tip, duration); } catch(_) { /* 忽略消息系统未初始化的情况 */ }
+			shake();
+			return true;
+		}
+
+		console.warn('[live2dAction] 未识别的动作:', action);
+		return false;
+	}catch(e){
+		console.error('[live2dAction] 执行动作异常:', e);
+		return false;
+	}
+};
+
+/**
+ * 只读方法：判断 Live2D 画布是否已就绪
+ * @returns {boolean}
+ */
+window.live2dIsReady = function(){
+	var c = document.getElementById('live2d');
+	return !!(c && c.width > 0 && c.height > 0);
+};
+// 
+// $(document).ready(function() {
+// ... existing code ...

@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}搜索: {{ query }} - MyBlog{% endblock %}
+{% block title %}搜索{% if query %}: {{ query }}{% endif %} - {% if site_profile %}{{ site_profile.site_name }}{% else %}MyBlog{% endif %}{% endblock %}
 
 {% block banner %}
 <div class="main-banner">
     <div class="container text-center">
         <h1>搜索结果</h1>
-        <p class="lead">{{ query }}</p>
+        <p class="lead">{% if query %}{{ query }}{% else %}输入关键词开始搜索{% endif %}</p>
     </div>
 </div>
 {% endblock %}
@@ -15,9 +15,9 @@
     {% if query %}
         {% if search_results %}
             <div class="alert alert-info mb-4">
-                <i class="bi bi-info-circle-fill me-2"></i> 找到 {{ search_results|length }} 篇相关文章
+                <i class="bi bi-info-circle-fill me-2"></i> 找到 {{ paginator.count }} 篇相关文章
             </div>
-            
+
             <div class="row">
                 {% for post in search_results %}
                     <div class="col-md-6 mb-4">
@@ -25,7 +25,7 @@
                             {% if post.featured_image %}
                                 <img src="{{ post.featured_image.url }}" class="card-img-top" alt="{{ post.title }}">
                             {% else %}
-                                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted" style="height: 200px;">
+                                <div class="card-img-top d-flex align-items-center justify-content-center bg-light text-muted card-thumb-placeholder">
                                     <i class="bi bi-image" style="font-size: 3rem;"></i>
                                 </div>
                             {% endif %}
@@ -36,15 +36,59 @@
                                 <div class="post-meta">
                                     <span><i class="bi bi-person-circle"></i> {{ post.author.username }}</span>
                                     <span><i class="bi bi-calendar3"></i> {{ post.created_on|date:"Y-m-d" }}</span>
-                                    <span><i class="bi bi-tag"></i> <a href="{% url 'category' post.category.name %}">{{ post.category.name }}</a></span>
+                                    <span><i class="bi bi-folder"></i> <a href="{% url 'category' post.category.name %}">{{ post.category.name }}</a></span>
                                 </div>
-                                <p class="card-text">{{ post.excerpt|default:post.content|truncatewords:20 }}</p>
+                                <p class="card-text post-excerpt-clamp">{{ post.excerpt|default:post.content|truncatewords:20 }}</p>
                                 <a href="{% url 'post_detail' post.slug %}" class="btn btn-primary">阅读全文</a>
                             </div>
                         </div>
                     </div>
                 {% endfor %}
             </div>
+
+            {% if is_paginated %}
+                <nav aria-label="Search results pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?q={{ query|urlencode }}&page=1" aria-label="First">
+                                    <span aria-hidden="true"><i class="bi bi-chevron-double-left"></i></span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true"><i class="bi bi-chevron-left"></i></span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?q={{ query|urlencode }}&page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?q={{ query|urlencode }}&page={{ page_obj.next_page_number }}" aria-label="Next">
+                                    <span aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?q={{ query|urlencode }}&page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                                    <span aria-hidden="true"><i class="bi bi-chevron-double-right"></i></span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
         {% else %}
             <div class="card">
                 <div class="card-body text-center py-5">
@@ -76,7 +120,7 @@
             </div>
         </div>
     {% endif %}
-    
+
     <div class="text-center mt-4">
         <a href="{% url 'home' %}" class="btn btn-outline-primary">
             <i class="bi bi-house-door me-2"></i>返回首页

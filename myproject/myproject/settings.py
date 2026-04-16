@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'blog',
+    'blog.apps.BlogConfig',
     'admin_interface',
     'colorfield',
 ]
@@ -73,6 +73,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'blog.context_processors.blog_sidebar',
             ],
         },
     },
@@ -119,6 +120,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'zh-hans'
+
+# 仅启用简体中文，避免浏览器语言把后台切成英文
+LANGUAGES = [
+    ('zh-hans', '简体中文'),
+]
 
 TIME_ZONE = 'Asia/Shanghai'
 

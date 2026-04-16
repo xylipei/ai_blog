@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ post.title }} - MyBlog{% endblock %}
+{% block title %}{{ post.title }} - {% if site_profile %}{{ site_profile.site_name }}{% else %}MyBlog{% endif %}{% endblock %}
 
 {% block content %}
 <article class="blog-post">
@@ -9,24 +9,46 @@
         <div class="post-meta mb-4">
             <span><i class="bi bi-person-circle"></i> {{ post.author.username }}</span>
             <span><i class="bi bi-calendar3"></i> {{ post.created_on|date:"Y-m-d H:i" }}</span>
-            <span><i class="bi bi-tag"></i> <a href="{% url 'category' post.category.name %}">{{ post.category.name }}</a></span>
+            <span><i class="bi bi-folder"></i> <a href="{% url 'category' post.category.name %}">{{ post.category.name }}</a></span>
+            {% if post.tags.exists %}
+            <span>
+                <i class="bi bi-bookmarks"></i>
+                {% for t in post.tags.all %}
+                    <a href="{% url 'tag' t.slug %}">#{{ t.name }}</a>{% if not forloop.last %} · {% endif %}
+                {% endfor %}
+            </span>
+            {% endif %}
             <span><i class="bi bi-chat-dots"></i> {{ comments.count }} 评论</span>
         </div>
     </div>
-    
+
     {% if post.featured_image %}
         <div class="text-center mb-4">
-            <img src="{{ post.featured_image.url }}" class="img-fluid rounded" alt="{{ post.title }}">
+            <img src="{{ post.featured_image.url }}" class="img-fluid rounded featured-image" alt="{{ post.title }}">
         </div>
     {% endif %}
-    
+
     <div class="blog-content card">
-        <div class="card-body">
+        <div class="card-body blog-prose">
             {{ post.content|linebreaks }}
         </div>
     </div>
-    
-    <!-- 文章导航 -->
+
+    {% if related_posts %}
+    <div class="card mt-4">
+        <div class="card-header">相关文章</div>
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                {% for rp in related_posts %}
+                    <li class="mb-2">
+                        <a href="{% url 'post_detail' rp.slug %}"><i class="bi bi-link-45deg me-1"></i>{{ rp.title }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="card mt-4">
         <div class="card-body">
             <div class="row">
@@ -47,8 +69,7 @@
             </div>
         </div>
     </div>
-    
-    <!-- 评论部分 -->
+
     <div class="card mt-5">
         <div class="card-header">
             <h3 class="mb-0">评论 ({{ comments.count }})</h3>
@@ -59,7 +80,7 @@
                     <div class="card-body">
                         <div class="d-flex">
                             <div class="me-3">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ comment.name }}" alt="{{ comment.name }}" 
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ comment.name }}" alt="{{ comment.name }}"
                                     style="width: 50px; height: 50px; border-radius: 50%;">
                             </div>
                             <div>
@@ -78,13 +99,12 @@
             {% endfor %}
         </div>
     </div>
-    
-    <!-- 评论表单 -->
+
     <div class="comment-form mt-4">
         <h4 class="mb-4">发表评论</h4>
         <form method="post">
             {% csrf_token %}
-            
+
             <div class="row">
                 {% for field in comment_form %}
                     <div class="{% if field.name == 'body' %}col-12{% else %}col-md-6{% endif %} mb-3">
@@ -100,7 +120,8 @@
                     </div>
                 {% endfor %}
             </div>
-            
+
+            <p class="text-muted small">提交后需管理员审核通过，评论才会公开展示。</p>
             <button type="submit" class="btn btn-primary mt-3">提交评论</button>
         </form>
     </div>
@@ -109,6 +130,5 @@
 
 {% block extra_js %}
 <script>
-    // 此处可以添加评论表单验证等JavaScript
 </script>
 {% endblock %}

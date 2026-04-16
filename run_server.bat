@@ -1,22 +1,32 @@
 @echo off
-echo Django 开发服务器启动脚本
-echo -------------------------
+REM Use ASCII-only lines so cmd.exe does not misparse UTF-8 multibyte chars as commands.
+echo Django dev server launcher
+echo --------------------------
 
-:: 进入项目目录
-cd myproject
+cd /d "%~dp0myproject"
+if errorlevel 1 (
+  echo ERROR: could not cd to myproject
+  pause
+  exit /b 1
+)
 
-:: 激活虚拟环境（如果使用虚拟环境）
-call ..\venv\Scripts\activate
+call "%~dp0venv\Scripts\activate.bat"
+if errorlevel 1 (
+  echo ERROR: could not activate venv
+  pause
+  exit /b 1
+)
 
-:: 运行迁移
-echo 执行数据库迁移...
+echo Running migrations...
 python manage.py migrate
+if errorlevel 1 (
+  echo ERROR: migrate failed
+  pause
+  exit /b 1
+)
 
-:: 启动服务器
-echo 启动开发服务器...
+echo Starting dev server...
 python manage.py runserver
-
-:: 如果想自定义端口，可以使用下面的命令
-:: python manage.py runserver 8080
+REM python manage.py runserver 8080
 
 pause
