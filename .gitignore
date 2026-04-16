@@ -48,3 +48,9 @@ Desktop.ini
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# 线上/服务器本地配置（Apache、uWSGI、Gunicorn 等，勿提交）
+.htaccess
+myproject/gunicorn_conf.py
+myproject/uwsgi.ini
+uwsgi.pid
