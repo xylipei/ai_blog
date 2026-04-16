@@ -40,7 +40,10 @@ class Post(models.Model):
         on_delete=models.CASCADE,
         related_name='blog_posts',
     )
-    content = models.TextField('正文')
+    content = models.TextField(
+        '正文',
+        help_text='使用 Markdown 编写；后台使用 django-markdownx 编辑器，可实时预览。',
+    )
     featured_image = models.ImageField('特色图片', upload_to='blog/', blank=True, null=True)
     excerpt = models.TextField('摘要', null=True, blank=True)
     category = models.ForeignKey(

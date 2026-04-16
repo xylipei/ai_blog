@@ -37,6 +37,12 @@ class BlogSmokeTests(TestCase):
     def test_archive_ok(self):
         r = self.client.get('/archive/')
         self.assertEqual(r.status_code, 200)
+        p = Post.objects.get(slug='hello-world')
+        self.assertContains(
+            r,
+            f'/archive/{p.created_on.year}/{p.created_on.month}/',
+            msg_prefix='归档页应出现已发布文章所在年月的链接',
+        )
 
     def test_archive_month_ok(self):
         p = Post.objects.get(slug='hello-world')

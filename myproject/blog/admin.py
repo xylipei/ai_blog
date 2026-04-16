@@ -1,4 +1,6 @@
+from django import forms
 from django.contrib import admin
+from markdownx.widgets import MarkdownxWidget
 
 from .models import Post, Category, Comment, NavLink, Tag, SiteProfile
 
@@ -28,17 +30,46 @@ class CommentInline(admin.TabularInline):
     verbose_name_plural = '评论'
 
 
+class PostAdminForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = '__all__'
+        widgets = {
+            'content': MarkdownxWidget(
+                attrs={
+                    'data-markdownx-editor-max-height': '480',
+                    'data-markdownx-preview-max-height': '480',
+                }
+            ),
+        }
+
+
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
+    form = PostAdminForm
     list_display = ('title', 'slug', 'author', 'created_on', 'status', 'category')
+    list_editable = ('status',)
     list_filter = ('status', 'created_on', 'category')
     search_fields = ('title', 'content')
     prepopulated_fields = {'slug': ('title',)}
     raw_id_fields = ('author',)
     filter_horizontal = ('tags',)
-    date_hierarchy = 'created_on'
+    # 不使用 date_hierarchy：MySQL 未加载时区表时，USE_TZ=True 会触发
+    # ValueError: Database returned an invalid datetime value...
     inlines = [CommentInline]
     save_on_top = True
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('title', 'slug', 'author', 'status', 'category', 'tags'),
+        }),
+        ('正文（Markdown）', {
+            'fields': ('content',),
+            'description': '支持 Markdown，侧栏实时预览；编辑器内可拖拽/粘贴图片上传（需登录后台）。',
+        }),
+        ('展示与摘要', {
+            'fields': ('featured_image', 'excerpt'),
+        }),
+    )
 
 
 @admin.register(Comment)

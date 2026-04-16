@@ -1,6 +1,16 @@
 from django import template
+from django.utils.safestring import mark_safe
+from markdownx.utils import markdownify as markdownx_markdownify
 
 register = template.Library()
+
+
+@register.filter(name='markdownify')
+def markdownify(value):
+    """与 django-markdownx 后台预览一致的 Markdown→HTML（4.x 已移除 markdownx_tags）。"""
+    if value is None or value == '':
+        return ''
+    return mark_safe(markdownx_markdownify(str(value)))
 
 
 @register.simple_tag

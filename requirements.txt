@@ -5,6 +5,8 @@ mysqlclient==2.2.7
 Pillow==10.0.0
 django-admin-interface==0.30.0
 django-ckeditor==6.7.0
+django-markdownx>=4.0.7,<5
+Markdown>=3.5
 django-colorfield==0.13.0
 django-crispy-forms==2.0
 langchain==0.2.1

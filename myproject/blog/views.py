@@ -1,11 +1,29 @@
+from datetime import date
+from types import SimpleNamespace
+
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import generic
 from django.contrib import messages
 from django.db.models import Q, Count
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.utils import timezone
 
 from .models import Post, Category, Tag
 from .forms import CommentForm
+
+
+def _post_local_year_month(row):
+    """
+    与归档索引一致：优先 created_on，否则 updated_on；按当前时区得到 (年, 月)。
+    不用 ORM 的 __year/__month：在 MySQL + USE_TZ 且未装时区表时，与 Python 侧 localtime 可能不一致。
+    """
+    dt = row.get('created_on') or row.get('updated_on')
+    if dt is None:
+        return None
+    if settings.USE_TZ and timezone.is_aware(dt):
+        dt = timezone.localtime(dt)
+    return dt.year, dt.month
 
 
 class PostList(generic.ListView):
@@ -76,12 +94,17 @@ class ArchiveMonthView(generic.ListView):
     def get_queryset(self):
         y = int(self.kwargs['year'])
         m = int(self.kwargs['month'])
+        ids = []
+        for row in (
+            Post.objects.filter(status='published')
+            .order_by('-created_on')
+            .values('pk', 'created_on', 'updated_on')
+        ):
+            ym = _post_local_year_month(row)
+            if ym == (y, m):
+                ids.append(row['pk'])
         return (
-            Post.objects.filter(
-                status='published',
-                created_on__year=y,
-                created_on__month=m,
-            )
+            Post.objects.filter(pk__in=ids)
             .select_related('author', 'category')
             .prefetch_related('tags')
             .order_by('-created_on')
@@ -182,5 +205,22 @@ def about(request):
 
 
 def archive_index(request):
-    archive_dates = Post.objects.filter(status='published').dates('created_on', 'month', order='DESC')
-    return render(request, 'blog/archive.html', {'archive_dates': archive_dates})
+    # 不在 SQL 里用 TruncMonth/dates：MySQL 未加载时区表时 CONVERT_TZ 会报错。在 Python 里按当前时区聚合成 (年, 月)。
+    # created_on 在个别库/导入数据下可能读成 None，用 updated_on 兜底；模板里用 SimpleNamespace，避免 dict 在 {% url %} 中解析异常。
+    month_keys = {}
+    for row in (
+        Post.objects.filter(status='published')
+        .order_by('-created_on')
+        .values('created_on', 'updated_on')
+    ):
+        ym = _post_local_year_month(row)
+        if ym is None:
+            continue
+        key = (ym[0], ym[1])
+        if key not in month_keys:
+            month_keys[key] = date(ym[0], ym[1], 1)
+    months = [
+        SimpleNamespace(year=y, month=mo, label=month_keys[(y, mo)])
+        for (y, mo) in sorted(month_keys.keys(), reverse=True)
+    ]
+    return render(request, 'blog/archive.html', {'archive_months': months})

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load blog_extras %}
 
 {% block title %}{{ post.title }} - {% if site_profile %}{{ site_profile.site_name }}{% else %}MyBlog{% endif %}{% endblock %}
 
@@ -29,8 +30,8 @@
     {% endif %}
 
     <div class="blog-content card">
-        <div class="card-body blog-prose">
-            {{ post.content|linebreaks }}
+        <div class="card-body blog-prose markdown-body">
+            {{ post.content|markdownify }}
         </div>
     </div>
 

@@ -14,18 +14,18 @@
 {% block content %}
 <div class="card">
     <div class="card-body">
-        {% if archive_dates %}
+        {% if archive_months %}
             <ul class="list-unstyled mb-0">
-                {% for d in archive_dates %}
+                {% for m in archive_months %}
                     <li class="mb-3 pb-3 border-bottom">
-                        <a href="{% url 'archive_month' d.year d.month %}" class="fs-5">
-                            <i class="bi bi-calendar3 me-2"></i>{{ d|date:"Y 年 n 月" }}
+                        <a href="{% url 'archive_month' year=m.year month=m.month %}" class="fs-5">
+                            <i class="bi bi-calendar3 me-2"></i>{{ m.label|date:"Y 年 n 月" }}
                         </a>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <p class="text-muted mb-0">暂无已发布文章。</p>
+            <p class="text-muted mb-0">暂无已发布文章。若已在后台添加文章，请将「状态」设为<strong>已发布</strong>并保存后刷新本页。</p>
         {% endif %}
     </div>
 </div>

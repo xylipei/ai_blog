@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'markdownx',
     'blog.apps.BlogConfig',
     'admin_interface',
     'colorfield',
@@ -85,9 +86,11 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+_db_engine = os.getenv('DB_ENGINE', 'django.db.backends.mysql')
+
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
+        'ENGINE': _db_engine,
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
@@ -95,6 +98,12 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT'),
     }
 }
+
+# MySQL utf8 仅为 3 字节，无法存 emoji；须用 utf8mb4（Django 文档推荐）
+if 'mysql' in _db_engine:
+    DATABASES['default']['OPTIONS'] = {
+        'charset': 'utf8mb4',
+    }
 
 
 # Password validation
@@ -154,3 +163,14 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 SILENCED_SYSTEM_CHECKS = ["security.W019"]
 
 ADMIN_INTERFACE_THEME = 'adminlte'
+
+# django-markdownx: admin editor + markdownify on frontend
+MARKDOWNX_MARKDOWN_EXTENSIONS = [
+    'markdown.extensions.extra',
+    'markdown.extensions.nl2br',
+    'markdown.extensions.sane_lists',
+    'markdown.extensions.fenced_code',
+]
+MARKDOWNX_MEDIA_PATH = 'markdownx/uploads/'
+MARKDOWNX_UPLOAD_MAX_SIZE = 5 * 1024 * 1024
+MARKDOWNX_IMAGE_MAX_SIZE = {'size': (1920, 1920), 'quality': 90}
