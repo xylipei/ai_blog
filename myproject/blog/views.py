@@ -204,6 +204,10 @@ def about(request):
     return render(request, 'blog/about.html')
 
 
+def resume(request):
+    return render(request, 'blog/resume.html')
+
+
 def archive_index(request):
     # 不在 SQL 里用 TruncMonth/dates：MySQL 未加载时区表时 CONVERT_TZ 会报错。在 Python 里按当前时区聚合成 (年, 月)。
     # created_on 在个别库/导入数据下可能读成 None，用 updated_on 兜底；模板里用 SimpleNamespace，避免 dict 在 {% url %} 中解析异常。

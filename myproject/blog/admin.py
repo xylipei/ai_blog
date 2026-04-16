@@ -44,6 +44,21 @@ class PostAdminForm(forms.ModelForm):
         }
 
 
+class SiteProfileAdminForm(forms.ModelForm):
+    class Meta:
+        model = SiteProfile
+        fields = '__all__'
+        widgets = {
+            'about_page_html': forms.Textarea(attrs={'rows': 14, 'cols': 80}),
+            'resume_markdown': MarkdownxWidget(
+                attrs={
+                    'data-markdownx-editor-max-height': '480',
+                    'data-markdownx-preview-max-height': '480',
+                }
+            ),
+        }
+
+
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     form = PostAdminForm
@@ -94,6 +109,7 @@ class NavLinkAdmin(admin.ModelAdmin):
 
 @admin.register(SiteProfile)
 class SiteProfileAdmin(admin.ModelAdmin):
+    form = SiteProfileAdminForm
     list_display = ('site_name', 'author_display_name', 'icp_number')
     fieldsets = (
         ('基本信息', {
@@ -101,6 +117,10 @@ class SiteProfileAdmin(admin.ModelAdmin):
         }),
         ('关于页与侧栏', {
             'fields': ('about_sidebar', 'about_page_html'),
+        }),
+        ('简历页', {
+            'fields': ('resume_title', 'resume_tagline', 'resume_markdown'),
+            'description': '前台地址为 /resume/；正文为 Markdown，与文章使用相同扩展与预览。标题留空时前台显示「个人简历」。',
         }),
         ('社交与联系', {
             'fields': ('github_url', 'twitter_url', 'bilibili_url', 'email'),

@@ -160,6 +160,24 @@ class SiteProfile(models.Model):
         blank=True,
         help_text='关于页正文（支持 HTML，模板中安全渲染）',
     )
+    resume_title = models.CharField(
+        '简历页标题',
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='留空则前台显示「个人简历」',
+    )
+    resume_tagline = models.CharField(
+        '简历页副标题',
+        max_length=200,
+        blank=True,
+        help_text='显示在横幅说明文字；留空可使用站点标语',
+    )
+    resume_markdown = models.TextField(
+        '简历页内容',
+        blank=True,
+        help_text='Markdown 格式；前台渲染规则与文章正文一致（见 settings 中 MARKDOWNX_* 扩展）',
+    )
     author_display_name = models.CharField('博主显示名', max_length=80, blank=True, default='博客作者')
     github_url = models.URLField('GitHub', blank=True)
     twitter_url = models.URLField('Twitter', blank=True)

@@ -457,3 +457,53 @@ footer h5 {
         display: block;
     }
 }
+
+/* 简历页：正文内区块间距（HTML 内可用 section / h2） */
+.resume-page .blog-prose section {
+    margin-bottom: 1.75rem;
+}
+
+.resume-page .blog-prose h2 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* 打印 / 导出 PDF：隐藏导航、侧栏与装饰，突出正文 */
+@media print {
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .navbar-blog,
+    .main-banner,
+    .sidebar-card,
+    #landlord,
+    .search-form,
+    footer,
+    .alert {
+        display: none !important;
+    }
+
+    .content-section .row .main-column {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
+    .content-section {
+        padding-top: 0 !important;
+    }
+
+    .resume-page {
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .resume-page a[href^='http']::after {
+        content: ' (' attr(href) ')';
+        font-size: 0.75em;
+        color: #555;
+    }
+}

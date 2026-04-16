@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load blog_extras %}
+
+{% block title %}{% if site_profile and site_profile.resume_title %}{{ site_profile.resume_title }}{% else %}个人简历{% endif %} - {% if site_profile %}{{ site_profile.site_name }}{% else %}MyBlog{% endif %}{% endblock %}
+
+{% block banner %}
+<div class="main-banner">
+    <div class="container text-center">
+        <h1>{% if site_profile and site_profile.resume_title %}{{ site_profile.resume_title }}{% else %}个人简历{% endif %}</h1>
+        <p class="lead">{% if site_profile and site_profile.resume_tagline %}{{ site_profile.resume_tagline }}{% elif site_profile and site_profile.tagline %}{{ site_profile.tagline }}{% else %}工作经历与技能概览{% endif %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card resume-page">
+    <div class="card-body blog-prose markdown-body">
+        {% if site_profile and site_profile.resume_markdown %}
+            {{ site_profile.resume_markdown|markdownify }}
+        {% else %}
+            <p class="text-muted mb-0">尚未填写简历内容。请在后台「站点信息」的「简历页」中编辑正文（Markdown）。</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -6,6 +6,7 @@ from .feeds import LatestPostsFeed
 urlpatterns = [
     path('', views.PostList.as_view(), name='home'),
     path('about/', views.about, name='about'),
+    path('resume/', views.resume, name='resume'),
     path('categories/', views.CategoryListView.as_view(), name='category_list'),
     path('category/<str:category>/', views.CategoryView.as_view(), name='category'),
     path('post/<slug:slug>/', views.post_detail, name='post_detail'),

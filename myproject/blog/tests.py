@@ -34,6 +34,12 @@ class BlogSmokeTests(TestCase):
         r = self.client.get('/about/')
         self.assertEqual(r.status_code, 200)
 
+    def test_resume_ok(self):
+        r = self.client.get('/resume/')
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, '尚未填写简历内容', msg_prefix='无内容时应提示在后台填写')
+        self.assertContains(r, 'Markdown', msg_prefix='占位提示应说明使用 Markdown')
+
     def test_archive_ok(self):
         r = self.client.get('/archive/')
         self.assertEqual(r.status_code, 200)
